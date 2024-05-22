@@ -31,7 +31,7 @@ function main() {
 
 init_docker_build_push() {
   local TAG=generate_tag $1
-  local $ACCOUNT_URL=$@
+  local ACCOUNT_URL=$2
   docker_build $TAG $ACCOUNT_URL
   docker_push_to_ecr $TAG $ACCOUNT_URL
 
