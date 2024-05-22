@@ -4,6 +4,7 @@ set -e
 INPUT_PATH="${INPUT_PATH:-.}"
 INPUT_DOCKERFILE="${INPUT_DOCKERFILE:-Dockerfile}"
 INPUT_TAGS="${INPUT_TAGS:-latest}"
+INPUT_GITOPS_TAG="${INPUT_GITOPS_TAG:-false}"
 INPUT_CREATE_REPO="${INPUT_CREATE_REPO:-false}"
 INPUT_SET_REPO_POLICY="${INPUT_SET_REPO_POLICY:-false}"
 INPUT_REPO_POLICY_FILE="${INPUT_REPO_POLICY_FILE:-repo-policy.json}"
@@ -22,12 +23,17 @@ function main() {
   assume_role
   login
   run_pre_build_script $INPUT_PREBUILD_SCRIPT
-  docker_build $INPUT_TAGS $ACCOUNT_URL
   create_ecr_repo $INPUT_CREATE_REPO
   set_ecr_repo_policy $INPUT_SET_REPO_POLICY
   put_image_scanning_configuration $INPUT_IMAGE_SCANNING_CONFIGURATION
-  docker_push_to_ecr $INPUT_TAGS $ACCOUNT_URL
+  init_docker_build_push $INPUT_GITOPS_TAG $ACCOUNT_URL
 }
+
+init_docker_build_push() {
+  local TAG=generate_tag $1
+  local $ACCOUNT_URL=$@
+  docker_build $TAG $ACCOUNT_URL
+  docker_push_to_ecr $TAG $ACCOUNT_URL
 
 function sanitize() {
   if [ -z "${1}" ]; then
@@ -69,6 +75,15 @@ function assume_role() {
     echo "== FINISHED ASSUME ROLE"
   fi
 }
+
+function generate_tag() {
+  local TAG
+  if [ "${1}" = true ]; then
+    local SANITISED_BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr '_' '-' | tr '/' '-' | tr '.' '-')
+    TAG="${SANITISED_BRANCH_NAME}.${GITHUB_SHA:0:7}.${date +"%d-%m-%Y-%H%M%S"}"
+  else
+    TAG=$INPUT_TAGS
+  fi
 
 function create_ecr_repo() {
   if [ "${1}" = true ]; then
