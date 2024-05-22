@@ -37,6 +37,9 @@ inputs:
   repo_policy_file:
     description: Set this to repository policy statement json file. only used if the set_repo_policy is set to true
     default: repo-policy.json
+  gitops_tag:
+    description: Set this to true to generate a GitOps friendly tag
+    default: false
   tags:
     description: Comma-separated string of ECR image tags
     default: latest
